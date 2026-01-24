@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { getApiKey } from '@/lib/apiKeyStorage';
+import { pushUndo } from '@/lib/undoStorage';
 
 interface Event {
   id: string;
@@ -121,6 +122,12 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
 
       const data = await res.json();
       if (data.success) {
+        // Track created events for undo
+        if (data.events) {
+          data.events.forEach((evt: any) => {
+            pushUndo({ type: 'create', eventId: evt.id, calendarId: evt.calendarId || 'primary' });
+          });
+        }
         const message = data.message || `Created ${data.events?.length || 0} event(s)!`;
         setAiResponse(message);
         addToHistory('Yes, add them anyway', message);
@@ -161,6 +168,11 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
 
       const data = await res.json();
       if (data.success) {
+        // Track deleted events for undo
+        pendingDeleteEvents.forEach(evt => {
+          const original = events?.find(e => e.id === evt.id);
+          if (original) pushUndo({ type: 'delete', eventData: original });
+        });
         const message = data.message || `Deleted ${data.deletedEvents?.length || 0} event(s)!`;
         setAiResponse(message);
         addToHistory('Yes, delete them', message);

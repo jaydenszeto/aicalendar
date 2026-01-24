@@ -3,6 +3,7 @@ import { format, startOfWeek, addDays, parseISO, isSameDay, isToday } from 'date
 import EventModal from './EventModal';
 import CreateEventModal from './CreateEventModal';
 import { getColorForEvent } from '@/lib/colorRulesStorage';
+import { pushUndo } from '@/lib/undoStorage';
 
 interface Event {
   id: string;
@@ -71,35 +72,6 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [draggingEvent, setDraggingEvent] = useState<Event | null>(null);
   const [dropTarget, setDropTarget] = useState<{ day: Date; minutes: number } | null>(null);
-  const [undoHistory, setUndoHistory] = useState<Array<{ event: Event; originalStart: string; originalEnd: string }>>([]);
-
-  // Keyboard shortcut for undo
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && undoHistory.length > 0) {
-        e.preventDefault();
-        const lastAction = undoHistory[undoHistory.length - 1];
-        // Restore the event to original time
-        fetch('/api/events', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            eventId: lastAction.event.id,
-            calendarId: lastAction.event.calendarId || 'primary',
-            start: lastAction.originalStart,
-            end: lastAction.originalEnd,
-          }),
-        }).then(res => {
-          if (res.ok) {
-            setUndoHistory(prev => prev.slice(0, -1));
-            onEventChange?.();
-          }
-        });
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undoHistory, onEventChange]);
 
   // Update current time every minute
   useEffect(() => {
@@ -292,7 +264,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
       // Save to undo history
       const originalStart = draggingEvent.start.dateTime || draggingEvent.start.date || '';
       const originalEnd = draggingEvent.end.dateTime || draggingEvent.end.date || '';
-      setUndoHistory(prev => [...prev.slice(-9), { event: draggingEvent, originalStart, originalEnd }]);
+      pushUndo({ type: 'move', eventId: draggingEvent.id, calendarId: draggingEvent.calendarId || 'primary', originalStart, originalEnd });
 
       // Call PATCH API
       fetch('/api/events', {

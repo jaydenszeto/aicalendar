@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import DayView from './DayView';
 import WeekView from './WeekView';
 import MonthView from './MonthView';
 import FloatingInput from './FloatingInput';
 import ApiKeyModal from '../Settings/ApiKeyModal';
 import ColorRulesModal from '../Settings/ColorRulesModal';
+import { executeUndo, setUndoCallback } from '@/lib/undoStorage';
 
 import { useSession, signIn, signOut } from "next-auth/react";
 
@@ -34,6 +35,19 @@ const CalendarView = () => {
 
   React.useEffect(() => {
     fetchEvents();
+  }, [fetchEvents]);
+
+  // Global Ctrl+Z undo handler
+  useEffect(() => {
+    setUndoCallback(fetchEvents);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        executeUndo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [fetchEvents]);
 
   const navigatePrev = () => {
