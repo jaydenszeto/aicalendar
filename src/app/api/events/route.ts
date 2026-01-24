@@ -80,13 +80,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { summary, start, end, description, location } = await req.json();
+    const { summary, start, end, description, location, timezone } = await req.json();
 
     if (!summary || !start || !end) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const calendar = getGoogleCalendarClient(session.accessToken);
+    const tz = timezone || 'America/Los_Angeles';
 
     const response = await calendar.events.insert({
       calendarId: 'primary',
@@ -94,8 +95,8 @@ export async function POST(req: Request) {
         summary,
         description,
         location,
-        start: { dateTime: start },
-        end: { dateTime: end },
+        start: { dateTime: start, timeZone: tz },
+        end: { dateTime: end, timeZone: tz },
       },
     });
 

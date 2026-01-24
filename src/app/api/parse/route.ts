@@ -33,10 +33,17 @@ export async function POST(req: Request) {
     if (forceCreate && pendingEvents) {
       const calendar = getGoogleCalendarClient(session.accessToken);
       const createdEvents = [];
+      const tz = timezone || 'America/Los_Angeles';
       for (const event of pendingEvents) {
+        // Add timezone to start/end if they have dateTime
+        const requestBody = {
+          ...event,
+          start: event.start?.dateTime ? { ...event.start, timeZone: tz } : event.start,
+          end: event.end?.dateTime ? { ...event.end, timeZone: tz } : event.end,
+        };
         const response = await calendar.events.insert({
           calendarId: 'primary',
-          requestBody: event,
+          requestBody,
         });
         createdEvents.push(response.data);
       }
