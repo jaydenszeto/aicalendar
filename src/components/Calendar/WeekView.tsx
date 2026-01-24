@@ -510,13 +510,10 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
                 const layout = eventLayouts.get(event.id);
                 if (!pos || !layout) return null;
 
-                // Calculate how many columns this event can span
-                // Event can expand from its column to maxColumn (or to end if no overlap to the right)
+                // Calculate width: span from this event's column to its rightmost overlapping column
+                // +1 because we want to include the current column in the count
                 const columnsToSpan = layout.maxColumn - layout.column + 1;
-                const canExpandToEnd = layout.maxColumn === layout.column && layout.column < layout.totalColumns - 1;
-                const effectiveSpan = canExpandToEnd ? layout.totalColumns - layout.column : columnsToSpan;
-
-                const width = `calc((100% - 4px) * ${effectiveSpan} / ${layout.totalColumns})`;
+                const width = `calc((100% - 4px) * ${columnsToSpan} / ${layout.totalColumns})`;
                 const left = `calc(${layout.column} * (100% - 4px) / ${layout.totalColumns} + 2px)`;
                 const color = getEventColor(event, eventIndex);
                 const isDraggedEvent = draggingEvent?.id === event.id;
