@@ -135,3 +135,41 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: error.message || 'Failed to delete event' }, { status: 500 });
   }
 }
+
+// Update an event
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.accessToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { eventId, calendarId = 'primary', summary, description, location, start, end } = await req.json();
+
+    if (!eventId) {
+      return NextResponse.json({ error: 'Event ID required' }, { status: 400 });
+    }
+
+    const calendar = getGoogleCalendarClient(session.accessToken);
+
+    // Build update payload only with provided fields
+    const updateBody: any = {};
+    if (summary !== undefined) updateBody.summary = summary;
+    if (description !== undefined) updateBody.description = description;
+    if (location !== undefined) updateBody.location = location;
+    if (start !== undefined) updateBody.start = { dateTime: start };
+    if (end !== undefined) updateBody.end = { dateTime: end };
+
+    const response = await calendar.events.patch({
+      calendarId,
+      eventId,
+      requestBody: updateBody,
+    });
+
+    return NextResponse.json({ success: true, event: response.data });
+  } catch (error: any) {
+    console.error('Error updating event:', error);
+    return NextResponse.json({ error: error.message || 'Failed to update event' }, { status: 500 });
+  }
+}
+

@@ -470,6 +470,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onDelete={handleDeleteEvent}
+          onEdit={() => onEventChange?.()}
         />
       )}
 

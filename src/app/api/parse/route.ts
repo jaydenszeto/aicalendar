@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { text, image, existingEvents = [], conversationHistory = [], forceCreate = false, forceDelete = false, pendingEvents = null, pendingDeleteEvents = null, apiKey: userApiKey, timezone } = await req.json();
+    const { text, image, existingEvents = [], conversationHistory = [], forceCreate = false, forceDelete = false, forceUpdate = false, pendingEvents = null, pendingDeleteEvents = null, pendingUpdateEvent = null, apiKey: userApiKey, timezone } = await req.json();
 
     // If we have pending events and forceCreate is true, just create them
     if (forceCreate && pendingEvents) {
@@ -79,6 +79,37 @@ export async function POST(req: Request) {
         failedEvents,
         message,
       });
+    }
+
+    // If we have pending update and forceUpdate is true, perform the update
+    if (forceUpdate && pendingUpdateEvent) {
+      const calendar = getGoogleCalendarClient(session.accessToken);
+
+      try {
+        const updateBody: any = {};
+        if (pendingUpdateEvent.summary !== undefined) updateBody.summary = pendingUpdateEvent.summary;
+        if (pendingUpdateEvent.description !== undefined) updateBody.description = pendingUpdateEvent.description;
+        if (pendingUpdateEvent.start?.dateTime) updateBody.start = { dateTime: pendingUpdateEvent.start.dateTime };
+        if (pendingUpdateEvent.end?.dateTime) updateBody.end = { dateTime: pendingUpdateEvent.end.dateTime };
+
+        await calendar.events.patch({
+          calendarId: pendingUpdateEvent.calendarId || 'primary',
+          eventId: pendingUpdateEvent.id,
+          requestBody: updateBody,
+        });
+
+        return NextResponse.json({
+          success: true,
+          type: 'update',
+          message: `Updated event successfully!`,
+        });
+      } catch (err: any) {
+        console.error('Failed to update event:', err);
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to update event: ' + (err.message || 'Unknown error'),
+        }, { status: 500 });
+      }
     }
 
     // Get current date/time with timezone
@@ -155,6 +186,7 @@ The user may either:
 1. Ask a QUESTION about their calendar or schedule (e.g., "what do I have today?", "when is my next meeting?", "am I free tomorrow at 3pm?")
 2. Want to CREATE new calendar events (e.g., "add meeting tomorrow at 2pm", "schedule coffee chat on Friday")
 3. Want to DELETE existing calendar events (e.g., "delete my 3pm meeting", "remove the OP tabling events on the 21st", "cancel tomorrow's lunch")
+4. Want to UPDATE/EDIT existing calendar events (e.g., "move my 3pm meeting to 4pm", "change the description of my CS70 class", "rename Coffee Chat to Team Standup")
 
 CRITICAL RULES FOR ANSWERING QUESTIONS:
 - When the user asks about their schedule, homework, assignments, deadlines, meetings, etc., ALWAYS look at the "User's existing events" list below and answer based on that data. NEVER ask for an image when answering questions - you already have their calendar data.
@@ -208,6 +240,23 @@ FOR EVENT DELETION (type: "delete"):
   ],
   "message": "Brief confirmation message about what will be deleted"
 }
+
+FOR EVENT UPDATES/EDITS (type: "update"):
+{
+  "type": "update",
+  "eventToUpdate": {
+    "id": "event_id_from_existing_events_list",
+    "calendarId": "calendar_id_from_existing_events_list",
+    "summary": "New title (optional, omit if not changing)",
+    "description": "New description (optional, omit if not changing)",
+    "start": { "dateTime": "2026-01-22T15:00:00${tzString}" },
+    "end": { "dateTime": "2026-01-22T16:00:00${tzString}" }
+  },
+  "message": "Brief description of what will be changed"
+}
+Example: User says "move my 3pm meeting to 4pm" - find the event at 3pm and update its start/end times to 4pm.
+Example: User says "add description 'bring laptop' to my CS70 class" - find CS70 and add the description.
+Example: User says "rename Coffee Chat to Team Standup" - update the summary field.
 
 IMPORTANT RULES FOR EVENT CREATION:
 - Use the user's LOCAL timezone (${tzString}) for all dateTime values
@@ -348,6 +397,26 @@ Respond ONLY with valid JSON, no markdown code blocks.`;
         type: 'confirmDelete',
         pendingDeleteEvents: eventsToDelete,
         message,
+      });
+    }
+
+    // Handle event update - ask for confirmation first
+    if (parsedResult.type === 'update') {
+      const eventToUpdate = parsedResult.eventToUpdate;
+
+      if (!eventToUpdate || !eventToUpdate.id) {
+        return NextResponse.json({
+          success: true,
+          type: 'question',
+          answer: "I couldn't find the event you want to update. Can you be more specific?"
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        type: 'confirmUpdate',
+        pendingUpdateEvent: eventToUpdate,
+        message: parsedResult.message || `Update "${eventToUpdate.summary || 'event'}"?`,
       });
     }
 

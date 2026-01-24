@@ -67,6 +67,7 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [pendingEvents, setPendingEvents] = useState<PendingEvent[] | null>(null);
   const [pendingDeleteEvents, setPendingDeleteEvents] = useState<PendingDeleteEvent[] | null>(null);
+  const [pendingUpdateEvent, setPendingUpdateEvent] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const conversationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -182,6 +183,46 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
     addToHistory('No, cancel', 'Cancelled. No events were deleted.');
   };
 
+  const handleConfirmUpdate = async () => {
+    if (!pendingUpdateEvent || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          forceUpdate: true,
+          pendingUpdateEvent,
+          apiKey: getApiKey() || undefined,
+          timezone: userTimezone,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        const message = data.message || 'Event updated successfully!';
+        setAiResponse(message);
+        addToHistory('Yes, update it', message);
+        onEventCreated?.();
+      } else {
+        setAiResponse('Error: ' + (data.error || 'Failed to update event'));
+      }
+    } catch (err) {
+      console.error(err);
+      setAiResponse('Failed to update event');
+    } finally {
+      setIsLoading(false);
+      setPendingUpdateEvent(null);
+    }
+  };
+
+  const handleCancelUpdate = () => {
+    setPendingUpdateEvent(null);
+    setAiResponse('Cancelled. Event was not updated.');
+    addToHistory('No, cancel', 'Cancelled. Event was not updated.');
+  };
+
   const handleResponse = (data: any, userMessage: string) => {
     if (data.success) {
       let responseMessage = '';
@@ -206,6 +247,16 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
       } else if (data.type === 'create') {
         responseMessage = data.message || `Created ${data.events?.length || 0} event(s)!`;
         setAiResponse(responseMessage);
+        onEventCreated?.();
+      } else if (data.type === 'confirmUpdate') {
+        // Ask for update confirmation
+        responseMessage = data.message;
+        setAiResponse(data.message);
+        setPendingUpdateEvent(data.pendingUpdateEvent);
+      } else if (data.type === 'update') {
+        // Update completed (after confirmation)
+        responseMessage = data.message;
+        setAiResponse(data.message);
         onEventCreated?.();
       }
       addToHistory(userMessage, responseMessage);
@@ -474,7 +525,56 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
             </div>
           )}
 
-          {!pendingEvents && !pendingDeleteEvents && (
+          {/* Update Confirmation Buttons */}
+          {pendingUpdateEvent && (
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              marginTop: '12px',
+            }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirmUpdate();
+                }}
+                disabled={isLoading}
+                style={{
+                  flex: 1,
+                  padding: '8px 16px',
+                  background: 'var(--primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: '500',
+                  opacity: isLoading ? 0.6 : 1,
+                }}
+              >
+                {isLoading ? 'Updating...' : 'Yes, update it'}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCancelUpdate();
+                }}
+                disabled={isLoading}
+                style={{
+                  flex: 1,
+                  padding: '8px 16px',
+                  background: 'transparent',
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: '500',
+                }}
+              >
+                No, cancel
+              </button>
+            </div>
+          )}
+
+          {!pendingEvents && !pendingDeleteEvents && !pendingUpdateEvent && (
             <div style={{
               fontSize: '0.7rem',
               color: 'var(--foreground-muted)',
