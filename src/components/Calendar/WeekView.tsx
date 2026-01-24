@@ -71,6 +71,35 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [draggingEvent, setDraggingEvent] = useState<Event | null>(null);
   const [dropTarget, setDropTarget] = useState<{ day: Date; minutes: number } | null>(null);
+  const [undoHistory, setUndoHistory] = useState<Array<{ event: Event; originalStart: string; originalEnd: string }>>([]);
+
+  // Keyboard shortcut for undo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && undoHistory.length > 0) {
+        e.preventDefault();
+        const lastAction = undoHistory[undoHistory.length - 1];
+        // Restore the event to original time
+        fetch('/api/events', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId: lastAction.event.id,
+            calendarId: lastAction.event.calendarId || 'primary',
+            start: lastAction.originalStart,
+            end: lastAction.originalEnd,
+          }),
+        }).then(res => {
+          if (res.ok) {
+            setUndoHistory(prev => prev.slice(0, -1));
+            onEventChange?.();
+          }
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoHistory, onEventChange]);
 
   // Update current time every minute
   useEffect(() => {
@@ -229,8 +258,8 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
   const getMinutesFromY = (y: number, rect: DOMRect) => {
     const relativeY = y - rect.top;
     const minutes = Math.floor((relativeY / HOUR_HEIGHT) * 60);
-    // Snap to 15-minute intervals
-    return Math.max(0, Math.min(24 * 60, Math.round(minutes / 15) * 15));
+    // Snap to 5-minute intervals for precision
+    return Math.max(0, Math.min(24 * 60, Math.round(minutes / 5) * 5));
   };
 
   const handleMouseDown = (e: React.MouseEvent, day: Date) => {
@@ -259,6 +288,11 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
       const newStart = new Date(dropTarget.day);
       newStart.setHours(Math.floor(dropTarget.minutes / 60), dropTarget.minutes % 60, 0, 0);
       const newEnd = new Date(newStart.getTime() + duration);
+
+      // Save to undo history
+      const originalStart = draggingEvent.start.dateTime || draggingEvent.start.date || '';
+      const originalEnd = draggingEvent.end.dateTime || draggingEvent.end.date || '';
+      setUndoHistory(prev => [...prev.slice(-9), { event: draggingEvent, originalStart, originalEnd }]);
 
       // Call PATCH API
       fetch('/api/events', {
@@ -459,6 +493,40 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
                   }}
                 />
               )}
+
+              {/* Drop target preview for event dragging */}
+              {draggingEvent && dropTarget && isSameDay(dropTarget.day, day) && (() => {
+                const oldStart = parseISO(draggingEvent.start.dateTime || draggingEvent.start.date || '');
+                const oldEnd = parseISO(draggingEvent.end.dateTime || draggingEvent.end.date || '');
+                const duration = (oldEnd.getTime() - oldStart.getTime()) / 60000; // in minutes
+                const top = (dropTarget.minutes / 60) * HOUR_HEIGHT;
+                const height = (duration / 60) * HOUR_HEIGHT;
+                return (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: `${top}px`,
+                      height: `${Math.max(height, 20)}px`,
+                      left: '2px',
+                      right: '2px',
+                      background: 'var(--primary)',
+                      opacity: 0.4,
+                      borderRadius: '4px',
+                      border: '2px dashed var(--primary)',
+                      pointerEvents: 'none',
+                      zIndex: 15,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                    }}
+                  >
+                    {format(new Date(2000, 0, 1, Math.floor(dropTarget.minutes / 60), dropTarget.minutes % 60), 'h:mm a')}
+                  </div>
+                );
+              })()}
 
               {/* Events */}
               {dayEvents.filter(e => e.start.dateTime).map((event, eventIndex) => {
