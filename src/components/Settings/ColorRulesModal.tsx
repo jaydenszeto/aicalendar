@@ -71,7 +71,7 @@ const ColorRulesModal: React.FC<ColorRulesModalProps> = ({ isOpen, onClose }) =>
       >
         <h2 style={{ margin: '0 0 8px 0', fontSize: '1.25rem' }}>🎨 Color Rules</h2>
         <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: 'var(--foreground-muted)' }}>
-          Events matching keywords will use the assigned color. First match wins.
+          Events matching keywords will use the assigned color. Use <code style={{ background: 'var(--background)', padding: '2px 6px', borderRadius: '4px' }}>|</code> to separate keywords.
         </p>
 
         {/* Rules List */}
@@ -104,11 +104,11 @@ const ColorRulesModal: React.FC<ColorRulesModalProps> = ({ isOpen, onClose }) =>
                 />
                 <input
                   type="text"
-                  value={rule.keywords.join(', ')}
+                  value={rule.keywords.join(' | ')}
                   onChange={e => handleUpdateRule(rule.id, {
-                    keywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean)
+                    keywords: e.target.value.split('|').map(k => k.trim()).filter(Boolean)
                   })}
-                  placeholder="Keywords (comma-separated)"
+                  placeholder="keyword1 | keyword2 | office hours"
                   style={{
                     width: '100%', background: 'transparent', border: 'none',
                     fontSize: '0.8rem', color: 'var(--foreground-muted)',

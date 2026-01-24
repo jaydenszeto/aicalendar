@@ -12,12 +12,13 @@ const STORAGE_KEY = 'aicalander_color_rules';
 
 // Default rules - intelligent auto-coloring
 const DEFAULT_RULES: ColorRule[] = [
-  { id: '1', name: 'Classes', keywords: ['lecture', 'class', 'discussion', 'CS', 'MATH', 'EECS', 'STAT'], color: '#3b82f6' },
-  { id: '2', name: 'Homework', keywords: ['homework', 'assignment', 'due', 'submission', 'HW'], color: '#22c55e' },
-  { id: '3', name: 'Exams', keywords: ['exam', 'midterm', 'final', 'quiz', 'test'], color: '#ef4444' },
-  { id: '4', name: 'Meetings', keywords: ['meeting', '1:1', 'standup', 'sync', 'call'], color: '#8b5cf6' },
-  { id: '5', name: 'Social', keywords: ['lunch', 'coffee', 'dinner', 'social', 'party'], color: '#f97316' },
-  { id: '6', name: 'Office Hours', keywords: ['office hours', 'OH', 'tutoring', 'help'], color: '#06b6d4' },
+  { id: '1', name: 'Classes', keywords: ['lecture', 'class', 'discussion', 'section', 'seminar', 'lab section'], color: '#3b82f6' },
+  { id: '2', name: 'Homework', keywords: ['homework', 'assignment', 'due', 'submission', 'problem set', 'pset', 'project'], color: '#22c55e' },
+  { id: '3', name: 'Exams', keywords: ['exam', 'midterm', 'final', 'quiz', 'test', 'assessment'], color: '#ef4444' },
+  { id: '4', name: 'Meetings', keywords: ['meeting', '1:1', 'standup', 'sync', 'call', 'interview', 'check-in'], color: '#8b5cf6' },
+  { id: '5', name: 'Social', keywords: ['lunch', 'coffee', 'dinner', 'social', 'party', 'hangout', 'brunch'], color: '#f97316' },
+  { id: '6', name: 'Office Hours', keywords: ['office hours', 'OH', 'tutoring', 'help session', 'study group'], color: '#06b6d4' },
+  { id: '7', name: 'Work', keywords: ['work', 'shift', 'job', 'internship', 'research'], color: '#eab308' },
 ];
 
 export function getColorRules(): ColorRule[] {
