@@ -214,7 +214,7 @@ const DayView: React.FC<DayViewProps> = ({ events, currentDate }) => {
       {/* Time Grid */}
       <div style={{ display: 'flex' }}>
         {/* Time Labels */}
-        <div style={{ width: '70px', flexShrink: 0, borderRight: '1px solid var(--border)' }}>
+        <div style={{ width: '70px', flexShrink: 0, borderRight: '1px solid var(--border)', paddingTop: '10px' }}>
           {hours.map((hour) => (
             <div key={hour} style={{ height: `${HOUR_HEIGHT}px`, position: 'relative' }}>
               <span style={{

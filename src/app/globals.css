@@ -28,6 +28,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
 }
 
 h1,

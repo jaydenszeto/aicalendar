@@ -366,7 +366,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
       {/* Calendar Grid */}
       <div style={{ display: 'flex', flex: 1 }} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
         {/* Time Column */}
-        <div style={{ width: '60px', flexShrink: 0, borderRight: '1px solid var(--border)' }}>
+        <div style={{ width: '60px', flexShrink: 0, borderRight: '1px solid var(--border)', paddingTop: '10px' }}>
           {hours.map((hour) => (
             <div key={hour} style={{ height: `${HOUR_HEIGHT}px`, position: 'relative' }}>
               <span style={{
@@ -401,6 +401,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
                 borderLeft: '1px solid var(--border)',
                 background: isToday(day) ? 'rgba(99, 102, 241, 0.03)' : 'transparent',
                 cursor: draggingEvent ? 'copy' : 'crosshair',
+                paddingTop: '10px',
               }}
               onMouseDown={(e) => handleMouseDown(e, day)}
               onMouseMove={handleMouseMove}

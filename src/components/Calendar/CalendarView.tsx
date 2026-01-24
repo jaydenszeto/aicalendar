@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import DayView from './DayView';
 import WeekView from './WeekView';
 import MonthView from './MonthView';
+import AgendaView from './AgendaView';
 import FloatingInput from './FloatingInput';
 import ApiKeyModal from '../Settings/ApiKeyModal';
 import ColorRulesModal from '../Settings/ColorRulesModal';
@@ -18,6 +19,7 @@ const CalendarView = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showColorRulesModal, setShowColorRulesModal] = useState(false);
+  const [showAgendaModal, setShowAgendaModal] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     if (!session?.accessToken) return;
@@ -210,7 +212,7 @@ const CalendarView = () => {
                   gap: '6px',
                 }}
               >
-                ⚙️ Settings
+                Settings
               </button>
               <button
                 onClick={() => setShowColorRulesModal(true)}
@@ -224,7 +226,21 @@ const CalendarView = () => {
                   fontSize: '0.85rem',
                 }}
               >
-                🎨 Colors
+                Tags
+              </button>
+              <button
+                onClick={() => setShowAgendaModal(true)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  background: 'var(--surface)',
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                }}
+              >
+                Agenda
               </button>
               <span style={{ fontSize: '0.85rem', color: 'var(--foreground-muted)' }}>{session.user?.name}</span>
               <button
@@ -248,6 +264,7 @@ const CalendarView = () => {
       <FloatingInput onEventCreated={fetchEvents} events={events} />
       <ApiKeyModal isOpen={showApiKeyModal} onClose={() => setShowApiKeyModal(false)} />
       <ColorRulesModal isOpen={showColorRulesModal} onClose={() => setShowColorRulesModal(false)} />
+      {showAgendaModal && <AgendaView events={events} onClose={() => setShowAgendaModal(false)} />}
     </div>
   );
 };
