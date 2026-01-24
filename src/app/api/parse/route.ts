@@ -124,9 +124,9 @@ export async function POST(req: Request) {
     // because the server runs in UTC, which causes "today" to be wrong for users in other timezones
     const now = new Date();
 
-    // Try to get user's timezone from browser (defaults to UTC if not available)
+    // Try to get user's timezone from browser (defaults to Pacific if not available)
     // In production, the server is in UTC, so we need the client's actual timezone
-    const userTimeZone = timezone || 'UTC';
+    const userTimeZone = timezone || 'America/Los_Angeles';
 
     const localDateString = now.toLocaleString('en-US', {
       timeZone: userTimeZone,
@@ -139,12 +139,26 @@ export async function POST(req: Request) {
       hour12: true
     });
 
-    // Get timezone offset for ISO strings
-    const tzOffset = -now.getTimezoneOffset();
-    const tzSign = tzOffset >= 0 ? '+' : '-';
-    const tzHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, '0');
-    const tzMins = String(Math.abs(tzOffset) % 60).padStart(2, '0');
-    const tzString = `${tzSign}${tzHours}:${tzMins}`;
+    // Get timezone offset for ISO strings based on USER's timezone, not server's
+    // The server runs in UTC, so we need to calculate the offset for the user's timezone
+    const getTimezoneOffset = (tz: string): string => {
+      try {
+        const now = new Date();
+        // Get time in UTC
+        const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+        // Get time in user's timezone
+        const tzDate = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+        // Calculate offset in minutes
+        const offsetMinutes = (tzDate.getTime() - utcDate.getTime()) / 60000;
+        const sign = offsetMinutes >= 0 ? '+' : '-';
+        const hours = String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(2, '0');
+        const mins = String(Math.abs(offsetMinutes) % 60).padStart(2, '0');
+        return `${sign}${hours}:${mins}`;
+      } catch {
+        return '-08:00'; // Default to Pacific time
+      }
+    };
+    const tzString = getTimezoneOffset(userTimeZone);
 
     // Get API key from request body or fallback to environment variable
     const apiKey = userApiKey || process.env.GEMINI_API_KEY;
