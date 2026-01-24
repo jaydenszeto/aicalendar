@@ -42,8 +42,32 @@ export function resetToDefaults(): ColorRule[] {
   return DEFAULT_RULES;
 }
 
-// Get color for an event based on its title
-export function getColorForEvent(title: string, rules?: ColorRule[]): string | null {
+// Colors for TYPE tags in event descriptions (override keyword rules)
+const TYPE_TAG_COLORS: Record<string, string> = {
+  'homework': '#22c55e',   // Green
+  'assignment': '#22c55e', // Green
+  'lab': '#06b6d4',        // Cyan
+  'quiz': '#f97316',       // Orange
+  'exam': '#ef4444',       // Red
+  'project': '#a855f7',    // Purple
+};
+
+// Get color for an event based on its title and description
+// Priority: TYPE tags in description > keyword rules > null
+export function getColorForEvent(title: string, rules?: ColorRule[], description?: string): string | null {
+  // First check for TYPE tags in description (highest priority)
+  if (description) {
+    const lowerDesc = description.toLowerCase();
+    const typeMatch = lowerDesc.match(/\[type:\s*(\w+)\]/);
+    if (typeMatch) {
+      const typeValue = typeMatch[1].toLowerCase();
+      if (TYPE_TAG_COLORS[typeValue]) {
+        return TYPE_TAG_COLORS[typeValue];
+      }
+    }
+  }
+
+  // Fall back to keyword rules
   const colorRules = rules || getColorRules();
   const lowerTitle = title.toLowerCase();
 

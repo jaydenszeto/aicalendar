@@ -43,8 +43,8 @@ const colorReplacements: Record<string, string> = {
 };
 
 const getEventColor = (event: Event, index: number) => {
-  // First check user-defined color rules
-  const ruleColor = getColorForEvent(event.summary || '');
+  // First check user-defined color rules (and TYPE tags in description)
+  const ruleColor = getColorForEvent(event.summary || '', undefined, event.description);
   if (ruleColor) return ruleColor;
 
   // Fallback to Google Calendar color or default
@@ -149,27 +149,31 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
       }
     });
 
-    const eventLayouts = new Map<string, { column: number; totalColumns: number }>();
+    const eventLayouts = new Map<string, { column: number; totalColumns: number; maxColumn: number }>();
 
     columns.forEach((column, colIndex) => {
       column.forEach(event => {
         const eventPos = getEventPosition(event);
         if (!eventPos) return;
 
-        let overlappingColumns = 1;
+        // Find the rightmost column that has an event overlapping with this one
+        let maxOverlappingColumn = colIndex;
         columns.forEach((otherColumn, otherColIndex) => {
-          if (otherColIndex === colIndex) return;
+          if (otherColIndex <= colIndex) return;
           const hasOverlap = otherColumn.some(otherEvent => {
             const otherPos = getEventPosition(otherEvent);
             if (!otherPos) return false;
             return eventPos.startMinutes < otherPos.endMinutes && eventPos.endMinutes > otherPos.startMinutes;
           });
-          if (hasOverlap) overlappingColumns++;
+          if (hasOverlap) {
+            maxOverlappingColumn = Math.max(maxOverlappingColumn, otherColIndex);
+          }
         });
 
         eventLayouts.set(event.id, {
           column: colIndex,
-          totalColumns: Math.max(overlappingColumns, columns.length > 1 ? columns.length : 1),
+          totalColumns: columns.length,
+          maxColumn: maxOverlappingColumn,
         });
       });
     });
@@ -506,7 +510,13 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
                 const layout = eventLayouts.get(event.id);
                 if (!pos || !layout) return null;
 
-                const width = `calc((100% - 4px) / ${layout.totalColumns})`;
+                // Calculate how many columns this event can span
+                // Event can expand from its column to maxColumn (or to end if no overlap to the right)
+                const columnsToSpan = layout.maxColumn - layout.column + 1;
+                const canExpandToEnd = layout.maxColumn === layout.column && layout.column < layout.totalColumns - 1;
+                const effectiveSpan = canExpandToEnd ? layout.totalColumns - layout.column : columnsToSpan;
+
+                const width = `calc((100% - 4px) * ${effectiveSpan} / ${layout.totalColumns})`;
                 const left = `calc(${layout.column} * (100% - 4px) / ${layout.totalColumns} + 2px)`;
                 const color = getEventColor(event, eventIndex);
                 const isDraggedEvent = draggingEvent?.id === event.id;

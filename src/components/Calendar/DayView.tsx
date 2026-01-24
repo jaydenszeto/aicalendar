@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, isSameDay, isToday } from 'date-fns';
+import { getColorForEvent } from '@/lib/colorRulesStorage';
 
 interface Event {
   id: string;
@@ -37,6 +38,11 @@ const colorReplacements: Record<string, string> = {
 };
 
 const getEventColor = (event: Event, index: number) => {
+  // First check user-defined color rules (and TYPE tags in description)
+  const ruleColor = getColorForEvent(event.summary || '', undefined, event.description);
+  if (ruleColor) return ruleColor;
+
+  // Fallback to Google Calendar color or default
   if (event.calendarColor) {
     const lower = event.calendarColor.toLowerCase();
     if (colorReplacements[lower]) return colorReplacements[lower];
