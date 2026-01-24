@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { text, image, existingEvents = [], conversationHistory = [], forceCreate = false, forceDelete = false, pendingEvents = null, pendingDeleteEvents = null, apiKey: userApiKey } = await req.json();
+    const { text, image, existingEvents = [], conversationHistory = [], forceCreate = false, forceDelete = false, pendingEvents = null, pendingDeleteEvents = null, apiKey: userApiKey, timezone } = await req.json();
 
     // If we have pending events and forceCreate is true, just create them
     if (forceCreate && pendingEvents) {
@@ -82,10 +82,16 @@ export async function POST(req: Request) {
     }
 
     // Get current date/time with timezone
+    // IMPORTANT: We need to use a timezone that's passed from the client
+    // because the server runs in UTC, which causes "today" to be wrong for users in other timezones
     const now = new Date();
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    // Try to get user's timezone from browser (defaults to UTC if not available)
+    // In production, the server is in UTC, so we need the client's actual timezone
+    const userTimeZone = timezone || 'UTC';
+
     const localDateString = now.toLocaleString('en-US', {
-      timeZone,
+      timeZone: userTimeZone,
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -143,7 +149,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const systemPrompt = `You are a helpful calendar assistant. Current date and time: ${localDateString}. Timezone: ${timeZone} (${tzString}).
+    const systemPrompt = `You are a helpful calendar assistant. Current date and time: ${localDateString}. Timezone: ${userTimeZone} (${tzString}).
 
 The user may either:
 1. Ask a QUESTION about their calendar or schedule (e.g., "what do I have today?", "when is my next meeting?", "am I free tomorrow at 3pm?")

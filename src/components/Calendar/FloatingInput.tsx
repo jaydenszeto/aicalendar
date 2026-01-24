@@ -70,6 +70,9 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const conversationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Get user's timezone to send to server (server runs in UTC)
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   // Clear conversation history after 2 minutes of inactivity
   useEffect(() => {
     if (conversationHistory.length > 0) {
@@ -111,6 +114,7 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
           forceCreate: true,
           pendingEvents,
           apiKey: getApiKey() || undefined,
+          timezone: userTimezone,
         }),
       });
 
@@ -150,6 +154,7 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
           forceDelete: true,
           pendingDeleteEvents,
           apiKey: getApiKey() || undefined,
+          timezone: userTimezone,
         }),
       });
 
@@ -223,6 +228,7 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
           existingEvents: getRelevantEvents(events),
           conversationHistory,
           apiKey: getApiKey() || undefined,
+          timezone: userTimezone,
         }),
       });
 
@@ -315,6 +321,7 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
           existingEvents: getRelevantEvents(events),
           conversationHistory,
           apiKey: getApiKey() || undefined,
+          timezone: userTimezone,
         }),
       });
 
