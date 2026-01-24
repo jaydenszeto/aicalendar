@@ -531,9 +531,11 @@ Respond ONLY with valid JSON, no markdown code blocks.`;
     }
 
     // Build confirmation message with event list
+    const tz = timezone || 'America/Los_Angeles';
     const eventList = nonDuplicateEvents.map((e: any) => {
       const startDate = new Date(e.start.dateTime || e.start.date);
       const dateStr = startDate.toLocaleString('en-US', {
+        timeZone: tz,
         weekday: 'short',
         month: 'short',
         day: 'numeric',
