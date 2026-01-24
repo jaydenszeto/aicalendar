@@ -6,6 +6,7 @@ import WeekView from './WeekView';
 import MonthView from './MonthView';
 import FloatingInput from './FloatingInput';
 import ApiKeyModal from '../Settings/ApiKeyModal';
+import ColorRulesModal from '../Settings/ColorRulesModal';
 
 import { useSession, signIn, signOut } from "next-auth/react";
 
@@ -15,6 +16,7 @@ const CalendarView = () => {
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
   const [events, setEvents] = useState<any[]>([]);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [showColorRulesModal, setShowColorRulesModal] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     if (!session?.accessToken) return;
@@ -196,6 +198,20 @@ const CalendarView = () => {
               >
                 ⚙️ Settings
               </button>
+              <button
+                onClick={() => setShowColorRulesModal(true)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  background: 'var(--surface)',
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                }}
+              >
+                🎨 Colors
+              </button>
               <span style={{ fontSize: '0.85rem', color: 'var(--foreground-muted)' }}>{session.user?.name}</span>
               <button
                 onClick={() => signOut()}
@@ -217,6 +233,7 @@ const CalendarView = () => {
 
       <FloatingInput onEventCreated={fetchEvents} events={events} />
       <ApiKeyModal isOpen={showApiKeyModal} onClose={() => setShowApiKeyModal(false)} />
+      <ColorRulesModal isOpen={showColorRulesModal} onClose={() => setShowColorRulesModal(false)} />
     </div>
   );
 };
