@@ -63,6 +63,8 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
   const [dragEnd, setDragEnd] = useState<{ minutes: number } | null>(null);
   const dragDayRef = useRef<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [draggingEvent, setDraggingEvent] = useState<Event | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ day: Date; minutes: number } | null>(null);
 
   // Update current time every minute
   useEffect(() => {
@@ -242,6 +244,35 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
   };
 
   const handleMouseUp = () => {
+    // Handle event drag-drop
+    if (draggingEvent && dropTarget) {
+      const oldStart = parseISO(draggingEvent.start.dateTime || draggingEvent.start.date || '');
+      const oldEnd = parseISO(draggingEvent.end.dateTime || draggingEvent.end.date || '');
+      const duration = oldEnd.getTime() - oldStart.getTime();
+
+      const newStart = new Date(dropTarget.day);
+      newStart.setHours(Math.floor(dropTarget.minutes / 60), dropTarget.minutes % 60, 0, 0);
+      const newEnd = new Date(newStart.getTime() + duration);
+
+      // Call PATCH API
+      fetch('/api/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: draggingEvent.id,
+          calendarId: draggingEvent.calendarId || 'primary',
+          start: newStart.toISOString(),
+          end: newEnd.toISOString(),
+        }),
+      }).then(res => {
+        if (res.ok) onEventChange?.();
+      });
+
+      setDraggingEvent(null);
+      setDropTarget(null);
+      return;
+    }
+
     if (isDragging && dragStart && dragEnd && dragDayRef.current) {
       const startMinutes = Math.min(dragStart.minutes, dragEnd.minutes);
       const endMinutes = Math.max(dragStart.minutes, dragEnd.minutes);
@@ -353,10 +384,20 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
                 position: 'relative',
                 borderLeft: '1px solid var(--border)',
                 background: isToday(day) ? 'rgba(99, 102, 241, 0.03)' : 'transparent',
-                cursor: 'crosshair',
+                cursor: draggingEvent ? 'copy' : 'crosshair',
               }}
               onMouseDown={(e) => handleMouseDown(e, day)}
               onMouseMove={handleMouseMove}
+              onDragOver={(e) => {
+                e.preventDefault();
+                const rect = e.currentTarget.getBoundingClientRect();
+                const minutes = getMinutesFromY(e.clientY, rect);
+                setDropTarget({ day, minutes });
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleMouseUp();
+              }}
             >
               {/* Hour lines */}
               {hours.map((hour) => (
@@ -422,13 +463,23 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
                 const width = `calc((100% - 4px) / ${layout.totalColumns})`;
                 const left = `calc(${layout.column} * (100% - 4px) / ${layout.totalColumns} + 2px)`;
                 const color = getEventColor(event, eventIndex);
+                const isDraggedEvent = draggingEvent?.id === event.id;
 
                 return (
                   <div
                     key={event.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      setDraggingEvent(event);
+                    }}
+                    onDragEnd={() => {
+                      setDraggingEvent(null);
+                      setDropTarget(null);
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedEvent(event);
+                      if (!draggingEvent) setSelectedEvent(event);
                     }}
                     style={{
                       position: 'absolute',
@@ -442,11 +493,12 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
                       color: 'white',
                       fontSize: '0.65rem',
                       overflow: 'hidden',
-                      cursor: 'pointer',
+                      cursor: 'grab',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                       zIndex: 10,
+                      opacity: isDraggedEvent ? 0.5 : 1,
                     }}
-                    title={`${event.summary}\n${formatEventTime(event)}`}
+                    title={`${event.summary}\n${formatEventTime(event)}\nDrag to reschedule`}
                   >
                     <div style={{ fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {event.summary}

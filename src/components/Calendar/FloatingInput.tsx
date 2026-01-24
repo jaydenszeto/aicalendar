@@ -258,6 +258,10 @@ const FloatingInput = ({ onEventCreated, events = [] }: FloatingInputProps) => {
         responseMessage = data.message;
         setAiResponse(data.message);
         onEventCreated?.();
+      } else if (data.type === 'schedule') {
+        // Smart scheduling response
+        responseMessage = data.answer;
+        setAiResponse(data.answer);
       }
       addToHistory(userMessage, responseMessage);
     } else {

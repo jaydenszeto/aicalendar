@@ -223,10 +223,24 @@ FOR EVENT CREATION (type: "create"):
       "summary": "Event title",
       "start": { "dateTime": "2026-01-22T15:00:00${tzString}" },
       "end": { "dateTime": "2026-01-22T16:00:00${tzString}" },
-      "description": "Optional description"
+      "description": "Optional description",
+      "recurrence": ["RRULE:FREQ=WEEKLY;BYDAY=TU,TH"]  // Optional - for recurring events only
     }
   ]
 }
+Example: "CS70 every Tuesday and Thursday at 2pm" → include recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=TU,TH"]
+Example: "daily standup at 9am" → include recurrence: ["RRULE:FREQ=DAILY"]
+Example: "weekly team meeting on Mondays" → include recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO"]
+
+FOR SCHEDULING/FREE TIME QUESTIONS (type: "schedule"):
+{
+  "type": "schedule",
+  "answer": "Your schedule analysis with suggested time slots",
+  "suggestedSlots": [
+    { "start": "2026-01-22T14:00:00${tzString}", "end": "2026-01-22T16:00:00${tzString}" }
+  ]
+}
+Example: User asks "when am I free for 2 hours this week?" - analyze their events and find gaps.
 
 FOR EVENT DELETION (type: "delete"):
 {
@@ -373,6 +387,16 @@ Respond ONLY with valid JSON, no markdown code blocks.`;
         success: true,
         type: 'question',
         answer: parsedResult.answer
+      });
+    }
+
+    // Handle schedule type - return free time slots
+    if (parsedResult.type === 'schedule') {
+      return NextResponse.json({
+        success: true,
+        type: 'schedule',
+        answer: parsedResult.answer,
+        suggestedSlots: parsedResult.suggestedSlots || []
       });
     }
 
