@@ -71,14 +71,14 @@ const ColorRulesModal: React.FC<ColorRulesModalProps> = ({ isOpen, onClose }) =>
       >
         <h2 style={{ margin: '0 0 8px 0', fontSize: '1.25rem' }}>🎨 Color Rules</h2>
         <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: 'var(--foreground-muted)' }}>
-          Events matching keywords will use the assigned color. Use <code style={{ background: 'var(--background)', padding: '2px 6px', borderRadius: '4px' }}>|</code> to separate keywords.
+          Type a keyword and press <strong>Enter</strong> to add. Click × to remove.
         </p>
 
         {/* Rules List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
           {rules.map(rule => (
             <div key={rule.id} style={{
-              display: 'flex', alignItems: 'center', gap: '10px', padding: '10px',
+              display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px',
               background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)',
             }}>
               {/* Color Picker */}
@@ -86,7 +86,7 @@ const ColorRulesModal: React.FC<ColorRulesModalProps> = ({ isOpen, onClose }) =>
                 type="color"
                 value={rule.color}
                 onChange={e => handleUpdateRule(rule.id, { color: e.target.value })}
-                style={{ width: '32px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                style={{ width: '32px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer', flexShrink: 0 }}
               />
 
               {/* Name & Keywords */}
@@ -99,21 +99,48 @@ const ColorRulesModal: React.FC<ColorRulesModalProps> = ({ isOpen, onClose }) =>
                   style={{
                     width: '100%', background: 'transparent', border: 'none',
                     fontWeight: '600', fontSize: '0.9rem', color: 'var(--foreground)',
-                    marginBottom: '4px',
+                    marginBottom: '6px',
                   }}
                 />
-                <input
-                  type="text"
-                  value={rule.keywords.join(' | ')}
-                  onChange={e => handleUpdateRule(rule.id, {
-                    keywords: e.target.value.split('|').map(k => k.trim()).filter(Boolean)
-                  })}
-                  placeholder="keyword1 | keyword2 | office hours"
-                  style={{
-                    width: '100%', background: 'transparent', border: 'none',
-                    fontSize: '0.8rem', color: 'var(--foreground-muted)',
-                  }}
-                />
+                {/* Keyword Tags */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                  {rule.keywords.map((kw, i) => (
+                    <span key={i} style={{
+                      background: rule.color + '30', color: 'var(--foreground)',
+                      padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem',
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                    }}>
+                      {kw}
+                      <button
+                        onClick={() => handleUpdateRule(rule.id, { keywords: rule.keywords.filter((_, idx) => idx !== i) })}
+                        style={{ background: 'none', border: 'none', color: 'var(--foreground-muted)', cursor: 'pointer', padding: 0, fontSize: '0.9rem' }}
+                      >×</button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    placeholder="+ add keyword"
+                    style={{
+                      background: 'transparent', border: 'none', fontSize: '0.75rem',
+                      color: 'var(--foreground-muted)', width: '80px', outline: 'none',
+                    }}
+                    onKeyDown={e => {
+                      const val = (e.target as HTMLInputElement).value.trim();
+                      if ((e.key === 'Enter' || e.key === ',') && val) {
+                        e.preventDefault();
+                        handleUpdateRule(rule.id, { keywords: [...rule.keywords, val] });
+                        (e.target as HTMLInputElement).value = '';
+                      }
+                    }}
+                    onBlur={e => {
+                      const val = e.target.value.trim();
+                      if (val) {
+                        handleUpdateRule(rule.id, { keywords: [...rule.keywords, val] });
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               {/* Delete */}
@@ -121,7 +148,7 @@ const ColorRulesModal: React.FC<ColorRulesModalProps> = ({ isOpen, onClose }) =>
                 onClick={() => handleDeleteRule(rule.id)}
                 style={{
                   background: 'transparent', border: 'none', color: '#ef4444',
-                  cursor: 'pointer', fontSize: '1.2rem', padding: '4px',
+                  cursor: 'pointer', fontSize: '1.2rem', padding: '4px', flexShrink: 0,
                 }}
               >×</button>
             </div>
