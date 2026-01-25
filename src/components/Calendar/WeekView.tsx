@@ -156,24 +156,30 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
         const eventPos = getEventPosition(event);
         if (!eventPos) return;
 
-        // Find the rightmost column that has an event overlapping with this one
-        let maxOverlappingColumn = colIndex;
+        // Find ALL columns that have an event overlapping with this one's time range
+        // Track which column indices overlap, sorted
+        const overlappingColumnIndices: number[] = [colIndex];
+
         columns.forEach((otherColumn, otherColIndex) => {
-          if (otherColIndex <= colIndex) return;
+          if (otherColIndex === colIndex) return;
           const hasOverlap = otherColumn.some(otherEvent => {
             const otherPos = getEventPosition(otherEvent);
             if (!otherPos) return false;
             return eventPos.startMinutes < otherPos.endMinutes && eventPos.endMinutes > otherPos.startMinutes;
           });
           if (hasOverlap) {
-            maxOverlappingColumn = Math.max(maxOverlappingColumn, otherColIndex);
+            overlappingColumnIndices.push(otherColIndex);
           }
         });
 
+        overlappingColumnIndices.sort((a, b) => a - b);
+        const localColumnIndex = overlappingColumnIndices.indexOf(colIndex);
+        const localColumnCount = overlappingColumnIndices.length;
+
         eventLayouts.set(event.id, {
-          column: colIndex,
-          totalColumns: columns.length,
-          maxColumn: maxOverlappingColumn,
+          column: localColumnIndex, // Use position among overlapping events
+          totalColumns: localColumnCount, // Use count of overlapping columns only
+          maxColumn: localColumnIndex, // Each event just takes one column slot
         });
       });
     });
@@ -511,10 +517,10 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
                 const layout = eventLayouts.get(event.id);
                 if (!pos || !layout) return null;
 
-                // Calculate width: span from this event's column to its rightmost overlapping column
-                // +1 because we want to include the current column in the count
-                const columnsToSpan = layout.maxColumn - layout.column + 1;
-                const width = `calc((100% - 4px) * ${columnsToSpan} / ${layout.totalColumns})`;
+                // Calculate width based on local overlapping columns only
+                // Events that don't overlap with anything fill 100% width
+                // Events that overlap share space equally among overlapping events
+                const width = `calc((100% - 4px) / ${layout.totalColumns})`;
                 const left = `calc(${layout.column} * (100% - 4px) / ${layout.totalColumns} + 2px)`;
                 const color = getEventColor(event, eventIndex);
                 const isDraggedEvent = draggingEvent?.id === event.id;
