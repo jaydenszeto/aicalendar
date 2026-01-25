@@ -62,6 +62,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfCurrentWeek, i));
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const HOUR_HEIGHT = 48;
+  const GRID_PADDING_TOP = 10; // Padding at top of day columns - must match paddingTop in day column style
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [createModalData, setCreateModalData] = useState<{ startTime: Date; endTime: Date } | null>(null);
@@ -84,7 +85,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
   // Calculate current time indicator position
   const getCurrentTimePosition = () => {
     const minutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-    return (minutes / 60) * HOUR_HEIGHT;
+    return (minutes / 60) * HOUR_HEIGHT + GRID_PADDING_TOP;
   };
 
   const getEventPosition = (event: Event) => {
@@ -108,7 +109,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
     const duration = Math.max(20, endMinutes - startMinutes);
 
     return {
-      top: (startMinutes / 60) * HOUR_HEIGHT,
+      top: (startMinutes / 60) * HOUR_HEIGHT + GRID_PADDING_TOP,
       height: (duration / 60) * HOUR_HEIGHT,
       startMinutes,
       endMinutes,
@@ -238,7 +239,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
   };
 
   const getMinutesFromY = (y: number, rect: DOMRect) => {
-    const relativeY = y - rect.top;
+    const relativeY = y - rect.top - GRID_PADDING_TOP;
     const minutes = Math.floor((relativeY / HOUR_HEIGHT) * 60);
     // Snap to 5-minute intervals for precision
     return Math.max(0, Math.min(24 * 60, Math.round(minutes / 5) * 5));
@@ -320,7 +321,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
     const startMinutes = Math.min(dragStart.minutes, dragEnd.minutes);
     const endMinutes = Math.max(dragStart.minutes, dragEnd.minutes);
     return {
-      top: (startMinutes / 60) * HOUR_HEIGHT,
+      top: (startMinutes / 60) * HOUR_HEIGHT + GRID_PADDING_TOP,
       height: ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT,
     };
   };
@@ -482,7 +483,7 @@ const WeekView: React.FC<WeekViewProps> = ({ events, currentDate, onEventChange 
                 const oldStart = parseISO(draggingEvent.start.dateTime || draggingEvent.start.date || '');
                 const oldEnd = parseISO(draggingEvent.end.dateTime || draggingEvent.end.date || '');
                 const duration = (oldEnd.getTime() - oldStart.getTime()) / 60000; // in minutes
-                const top = (dropTarget.minutes / 60) * HOUR_HEIGHT;
+                const top = (dropTarget.minutes / 60) * HOUR_HEIGHT + GRID_PADDING_TOP;
                 const height = (duration / 60) * HOUR_HEIGHT;
                 return (
                   <div

@@ -12,6 +12,8 @@ import { executeUndo, setUndoCallback } from '@/lib/undoStorage';
 
 import { useSession, signIn, signOut } from "next-auth/react";
 
+const SYNC_INTERVAL = 30000; // Sync with Google Calendar every 30 seconds
+
 const CalendarView = () => {
   const { data: session } = useSession();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -20,28 +22,44 @@ const CalendarView = () => {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showColorRulesModal, setShowColorRulesModal] = useState(false);
   const [showAgendaModal, setShowAgendaModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
-  const fetchEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async (showRefreshIndicator = false) => {
     if (!session?.accessToken) return;
+    if (showRefreshIndicator) setIsRefreshing(true);
     try {
       const res = await fetch('/api/events');
       if (res.status === 401) return;
       const data = await res.json();
       if (data.events) {
         setEvents(data.events);
+        setLastSynced(new Date());
       }
     } catch (e) {
       console.error("Failed to fetch events", e);
+    } finally {
+      if (showRefreshIndicator) setIsRefreshing(false);
     }
   }, [session]);
 
+  // Initial fetch
   React.useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
 
+  // Auto-sync with Google Calendar every SYNC_INTERVAL ms
+  useEffect(() => {
+    if (!session?.accessToken) return;
+    const interval = setInterval(() => {
+      fetchEvents(false); // Silent refresh, no indicator
+    }, SYNC_INTERVAL);
+    return () => clearInterval(interval);
+  }, [session, fetchEvents]);
+
   // Global Ctrl+Z undo handler
   useEffect(() => {
-    setUndoCallback(fetchEvents);
+    setUndoCallback(() => fetchEvents());
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault();
@@ -130,6 +148,30 @@ const CalendarView = () => {
             >
               Today
             </button>
+            <button
+              onClick={() => fetchEvents(true)}
+              disabled={isRefreshing}
+              title={lastSynced ? `Last synced: ${lastSynced.toLocaleTimeString()}` : 'Sync with Google Calendar'}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                background: 'var(--surface)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border)',
+                cursor: isRefreshing ? 'wait' : 'pointer',
+                fontSize: '0.85rem',
+                opacity: isRefreshing ? 0.6 : 1,
+                transition: 'transform 0.3s ease',
+              }}
+            >
+              <span style={{
+                display: 'inline-block',
+                animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+              }}>
+                ↻
+              </span>
+            </button>
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
             <button
               onClick={navigatePrev}
               style={{
@@ -257,11 +299,11 @@ const CalendarView = () => {
       {/* Calendar Content - scrolls with page */}
       <div style={{ paddingBottom: '100px' }}>
         {view === 'day' && <DayView events={events} currentDate={currentDate} />}
-        {view === 'week' && <WeekView events={events} currentDate={currentDate} onEventChange={fetchEvents} />}
+        {view === 'week' && <WeekView events={events} currentDate={currentDate} onEventChange={() => fetchEvents()} />}
         {view === 'month' && <MonthView events={events} currentDate={currentDate} />}
       </div>
 
-      <FloatingInput onEventCreated={fetchEvents} events={events} />
+      <FloatingInput onEventCreated={() => fetchEvents()} events={events} />
       <ApiKeyModal isOpen={showApiKeyModal} onClose={() => setShowApiKeyModal(false)} />
       <ColorRulesModal isOpen={showColorRulesModal} onClose={() => setShowColorRulesModal(false)} />
       {showAgendaModal && <AgendaView events={events} onClose={() => setShowAgendaModal(false)} />}
